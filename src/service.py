@@ -45,16 +45,12 @@ def service_stat(service, user=False):
         if status_search:
             status = status_search.group(1).strip()
             status_fail = status_search_f.group(1).strip().split()[0]
-            if status == 'active (running)':
-                service_status['status'] = 1
-            elif status == 'active (exited)':
-                service_status['status'] = 2
-            elif status == 'inactive (dead)':
-                service_status['status'] = 3
+            if status in ('active (running)', 'active (exited)', 'inactive (dead)'):
+                service_status['status'] = status.replace(' ', '')
             elif status_fail == 'failed':
-                service_status['status'] = 4
+                service_status['status'] = 'failed'
             else:
-                service_status['status'] = 0
+                service_status['status'] = 'unknown'
 
             # Get and convert "since" date in to seconds
             since_date = status_search.group(2).strip()
@@ -62,25 +58,21 @@ def service_stat(service, user=False):
             time_struct, parse_status = cal.parse(since_date)
             delta = datetime.now() - datetime(*time_struct[:6])
             seconds = delta.total_seconds()
-            service_status['status_time'] = int(seconds)
+            service_status['uptime'] = int(seconds)
             break
 
         if status_search_disabled:
             status = status_search_disabled.group(1).strip()
             status_fail = status_search_disabled_f.group(1).strip().split()[0]
-            if status == 'active (running)':
-                service_status['status'] = 1
-            elif status == 'active (exited)':
-                service_status['status'] = 2
-            elif status == 'inactive (dead)':
-                service_status['status'] = 3
+            if status in ('active (running)', 'active (exited)', 'inactive (dead)'):
+                service_status['status'] = status.replace(' ', '')
             elif status_fail == 'failed':
-                service_status['status'] = 4
+                service_status['status'] = 'failed'
             else:
-                service_status['status'] = 0
+                service_status['status'] = 'unknown'
 
             # There no "since" date to second so send 0
-            service_status['status_time'] = 0
+            service_status['uptime'] = 0
             break
 
     return service_status
@@ -115,8 +107,12 @@ if __name__ == '__main__':
                 pass
             else:
                 output.append(service_stat(name, True))
-        print(json.dumps(output))
-
+        
+        timestamp = str(datetime.now())
+        with open('mylog.txt', 'w') as f:
+            for o in output:
+                f.writelines(f"{timestamp} {o['service']} {o['status']} {o['uptime']}\n")
+        
     try:
         main()
     except KeyboardInterrupt:
